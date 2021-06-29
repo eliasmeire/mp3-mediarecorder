@@ -17,7 +17,7 @@ export const workerRecordingMessage = () => ({
     type: PostMessageType.WORKER_RECORDING as PostMessageType.WORKER_RECORDING,
 });
 
-export const dataAvailableMessage = (data: ArrayLike<number>) => ({
+export const dataAvailableMessage = (data: Float32Array) => ({
     type: PostMessageType.DATA_AVAILABLE as PostMessageType.DATA_AVAILABLE,
     data,
 });

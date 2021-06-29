@@ -17,6 +17,22 @@ const SafeAudioContext: typeof AudioContext = (window as any).AudioContext || (w
 const createGain = (ctx: AudioContext) => (ctx.createGain || (ctx as any).createGainNode).call(ctx);
 const createScriptProcessor = (ctx: AudioContext) =>
     (ctx.createScriptProcessor || (ctx as any).createJavaScriptNode).call(ctx, 4096, 1, 1);
+const clamp = (min: number, max: number) => (value: number): number => Math.min(Math.max(value, min), max);
+
+const mergeAudioChannels = (buffer: AudioBuffer): Float32Array => {
+    const channels = new Array(buffer.numberOfChannels).fill(null).map((_, i) => buffer.getChannelData(i));
+    const mergedChannelData: number[] = [];
+
+    for (let index = 0; index < channels[0].length; index++) {
+        const mergedSample = channels.reduce(
+            (result, channel) => clamp(-2_147_483_648, 2_147_483_647)(result + channel[index]),
+            0
+        );
+        mergedChannelData.push(mergedSample);
+    }
+
+    return new Float32Array(mergedChannelData);
+};
 
 export class Mp3MediaRecorder extends EventTarget {
     stream: MediaStream;
@@ -58,7 +74,7 @@ export class Mp3MediaRecorder extends EventTarget {
             throw this.getStateError('start');
         }
         this.processorNode.onaudioprocess = (event) => {
-            this.worker.postMessage(dataAvailableMessage(event.inputBuffer.getChannelData(0)));
+            this.worker.postMessage(dataAvailableMessage(mergeAudioChannels(event.inputBuffer)));
         };
         this.processorNode.connect(this.audioContext.destination);
         if (this.audioContext.state === 'closed') {
